@@ -1,0 +1,2 @@
+# logd
+Simple log storage
