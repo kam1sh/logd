@@ -1,0 +1,10 @@
+arango:
+  host: arango.local
+  port: 8529
+  db: logd
+  username: logd
+  password:
+
+listen:
+  port: 8080
+
