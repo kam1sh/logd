@@ -66,24 +66,12 @@ class LoggingServiceImpl(val db: ArangoDatabase) : LoggingService {
             bindVars.put("text", text)
             queryText = queryWithText
         }
-        val result = db.query(queryText, bindVars.get(), VPackSlice::class.java)
+        val result = db.query(queryText, bindVars.get(), String::class.java)
         val events = ArrayList<Event>()
-        result.forEach { vPackSlice ->
-            events.add(vPackSlice.toEvent())
+        result.forEach { rawEvent ->
+            events.add(Jackson.mapper.readValue(rawEvent))
         }
         return events
     }
 
-    private fun VPackSlice.toEvent(): Event {
-        val rawAttrs = get("attrs").toString()
-        log.trace("raw attrs: {}", rawAttrs)
-        val attrs = Jackson.mapper.readValue<Map<String, String>>(rawAttrs)
-        return Event(
-            ts = get("ts").asString.toZonedDateTime(),
-            message = get("message").asString,
-            attrs = attrs
-        )
-    }
-
-    private fun String.toZonedDateTime() = ZonedDateTime.parse(this, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 }

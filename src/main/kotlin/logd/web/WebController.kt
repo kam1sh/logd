@@ -1,8 +1,7 @@
 package logd.web
 
-import logd.App
 import logd.Event
-import logd.logging.LoggingServiceImpl
+import logd.logging.LoggingService
 import logd.web.Jackson.auto
 import org.http4k.core.*
 import org.http4k.filter.GzipCompressionMode
@@ -13,9 +12,7 @@ import org.slf4j.LoggerFactory
 import java.lang.Exception
 import java.time.ZonedDateTime
 
-class WebController(val app: App) {
-    private val loggingService = LoggingServiceImpl(app.db)
-
+class WebController(private val loggingService: LoggingService) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun asHttpHandler() = ServerFilters.GZip(compressionMode = GzipCompressionMode.Streaming)
