@@ -8,7 +8,7 @@ import org.http4k.server.Undertow
 import org.http4k.server.asServer
 import org.slf4j.LoggerFactory
 
-class Serve(val app: App) : CliktCommand() {
+class ServeCommand(val app: App) : CliktCommand(name = "serve") {
     private val log = LoggerFactory.getLogger(javaClass)
 
     override fun run() {

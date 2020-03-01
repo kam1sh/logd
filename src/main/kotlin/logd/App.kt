@@ -14,8 +14,8 @@ import com.github.ajalt.clikt.parameters.types.file
 import java.io.File
 import java.lang.Integer.min
 import java.nio.file.Paths
-import logd.cli.InitDatabase
-import logd.cli.Serve
+import logd.cli.InitDatabaseCommand
+import logd.cli.ServeCommand
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -75,7 +75,7 @@ fun main(args: Array<String>) {
     val app = App()
     try {
         CliApp(app)
-            .subcommands(InitDatabase(app), Serve(app))
+            .subcommands(InitDatabaseCommand(app), ServeCommand(app))
             .main(args)
     } finally {
         app.shutdown()

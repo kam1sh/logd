@@ -6,7 +6,7 @@ import logd.App
 import logd.COLLECTION_NAME
 import org.slf4j.LoggerFactory
 
-class InitDatabase(val app: App) : CliktCommand(name = "initdb") {
+class InitDatabaseCommand(val app: App) : CliktCommand(name = "initdb") {
     val log = LoggerFactory.getLogger(javaClass)
     override fun run() {
         try {
