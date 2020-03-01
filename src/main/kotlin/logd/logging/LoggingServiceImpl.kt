@@ -3,16 +3,15 @@ package logd.logging
 import com.arangodb.ArangoDatabase
 import com.arangodb.entity.BaseDocument
 import com.arangodb.util.MapBuilder
-import com.arangodb.velocypack.VPackSlice
 import com.fasterxml.jackson.module.kotlin.readValue
-import logd.COLLECTION_NAME
-import logd.Event
-import logd.web.Jackson
-import org.slf4j.LoggerFactory
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.collections.ArrayList
+import logd.COLLECTION_NAME
+import logd.Event
+import logd.web.Jackson
+import org.slf4j.LoggerFactory
 
 class LoggingServiceImpl(val db: ArangoDatabase) : LoggingService {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -31,10 +30,8 @@ class LoggingServiceImpl(val db: ArangoDatabase) : LoggingService {
             docs.add(doc)
         }
         val result = collection.insertDocuments(docs)
-        if (!result.errors.isEmpty())
-            result.errors.forEach { log.error("Error: {}", it.errorMessage) }
+        result.errors.forEach { log.error("Error: {}", it.errorMessage) }
         log.debug("Created document with key '{}'", result)
-
     }
 
     private val query = """
@@ -62,8 +59,8 @@ class LoggingServiceImpl(val db: ArangoDatabase) : LoggingService {
             .put("from", from)
             .put("until", untilDT)
         var queryText = query
-        if (text != null) {
-            bindVars.put("text", text)
+        text?.let {
+            bindVars.put("text", it)
             queryText = queryWithText
         }
         val result = db.query(queryText, bindVars.get(), String::class.java)
@@ -73,5 +70,4 @@ class LoggingServiceImpl(val db: ArangoDatabase) : LoggingService {
         }
         return events
     }
-
 }

@@ -1,5 +1,7 @@
 package logd.web
 
+import java.lang.Exception
+import java.time.ZonedDateTime
 import logd.Event
 import logd.logging.LoggingService
 import logd.web.Jackson.auto
@@ -9,8 +11,6 @@ import org.http4k.filter.ServerFilters
 import org.http4k.routing.bind
 import org.http4k.routing.routes
 import org.slf4j.LoggerFactory
-import java.lang.Exception
-import java.time.ZonedDateTime
 
 class WebController(private val loggingService: LoggingService) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -48,5 +48,4 @@ class WebController(private val loggingService: LoggingService) {
         val events = loggingService.searchEvents(searchFromRaw, searchUntilRaw, text)
         return eventsLens(events, Response(Status.OK))
     }
-
 }

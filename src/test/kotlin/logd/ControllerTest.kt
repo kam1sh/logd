@@ -4,13 +4,13 @@ import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import logd.logging.LoggingService
-import logd.web.WebController
-import logd.web.Jackson.auto
-import org.http4k.core.*
-import org.junit.Test
 import java.time.ZonedDateTime
+import logd.logging.LoggingService
+import logd.web.Jackson.auto
+import logd.web.WebController
+import org.http4k.core.*
 import org.junit.Before
+import org.junit.Test
 
 class ControllerTest {
     lateinit var loggingService: LoggingService
