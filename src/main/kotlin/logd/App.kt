@@ -52,7 +52,7 @@ class App {
 
     fun shutdown() {
         if (::arango.isInitialized) {
-            log.info("Shutting down database.")
+            log.info("Shutting down database connection.")
             arango.shutdown()
         }
     }

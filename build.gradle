@@ -13,8 +13,6 @@ plugins {
 }
 
 repositories {
-    // Use jcenter for resolving dependencies.
-    // You can declare any Maven/Ivy/file repository here.
     jcenter()
     mavenCentral()
 }
@@ -33,7 +31,6 @@ dependencies {
 
     // web
     implementation group: "org.http4k", name: "http4k-core", version: "$http4k_version"
-    implementation group: "org.http4k", name: "http4k-multipart", version: "$http4k_version"
     implementation group: "org.http4k", name: "http4k-server-undertow", version: "$http4k_version"
     implementation group: "org.http4k", name: "http4k-format-jackson", version: "$http4k_version"
 
@@ -81,6 +78,5 @@ compileTestKotlin {
 apply plugin: 'com.github.johnrengelman.shadow'
 
 application {
-    // Define the main class for the application.
     mainClassName = 'logd.AppKt'
 }
