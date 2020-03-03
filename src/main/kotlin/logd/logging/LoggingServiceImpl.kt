@@ -7,7 +7,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
-import kotlin.collections.ArrayList
 import logd.COLLECTION_NAME
 import logd.Event
 import logd.web.Jackson
@@ -19,19 +18,18 @@ class LoggingServiceImpl(val db: ArangoDatabase) : LoggingService {
 
     override fun putEvents(events: List<Event>) {
         val collection = db.collection(COLLECTION_NAME)
-        val docs = ArrayList<BaseDocument>(events.size)
-        events.forEach {
+        val docs = events.map {
             val doc = BaseDocument().apply {
                 addAttribute("ts", it.ts.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
                 addAttribute("message", it.message)
                 addAttribute("attrs", it.attrs)
             }
             log.trace("Document: {}", doc)
-            docs.add(doc)
+            doc
         }
         val result = collection.insertDocuments(docs)
         result.errors.forEach { log.error("Error: {}", it.errorMessage) }
-        log.debug("Created document with key '{}'", result)
+        result.documents.forEach { log.debug("Created document with key '{}'", it.key) }
     }
 
     private val query = """
@@ -64,10 +62,6 @@ class LoggingServiceImpl(val db: ArangoDatabase) : LoggingService {
             queryText = queryWithText
         }
         val result = db.query(queryText, bindVars.get(), String::class.java)
-        val events = ArrayList<Event>()
-        result.forEach { rawEvent ->
-            events.add(Jackson.mapper.readValue(rawEvent))
-        }
-        return events
+        return result.map { Jackson.mapper.readValue<Event>(it) }.toList()
     }
 }
