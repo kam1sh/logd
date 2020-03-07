@@ -1,9 +1,5 @@
 package logd.logging
 
-import com.arangodb.ArangoDatabase
-import com.arangodb.entity.BaseDocument
-import com.arangodb.util.MapBuilder
-import com.fasterxml.jackson.module.kotlin.readValue
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -11,55 +7,73 @@ import logd.COLLECTION_NAME
 import logd.Event
 import logd.web.Jackson
 import org.slf4j.LoggerFactory
+import java.sql.Timestamp
+import java.time.ZoneId
+import javax.sql.DataSource
+import kotlin.collections.ArrayList
 
-class LoggingServiceImpl(val db: ArangoDatabase) : LoggingService {
-    private val log = LoggerFactory.getLogger(javaClass)
-    private val tz = TimeZone.getDefault().toZoneId()
-
-    override fun putEvents(events: List<Event>) {
-        val collection = db.collection(COLLECTION_NAME)
-        val docs = events.map {
-            val doc = BaseDocument().apply {
-                addAttribute("ts", it.ts.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
-                addAttribute("message", it.message)
-                addAttribute("attrs", it.attrs)
-            }
-            log.trace("Document: {}", doc)
-            doc
-        }
-        val result = collection.insertDocuments(docs)
-        result.errors.forEach { log.error("Error: {}", it.errorMessage) }
-        result.documents.forEach { log.debug("Created document with key '{}'", it.key) }
-    }
-
-    private val query = """
-        FOR x IN $COLLECTION_NAME
-        FILTER x.ts >= @from AND x.ts <= @until
-        LIMIT 100
-        RETURN x
+class LoggingServiceImpl(val db: DataSource) : LoggingService {
+    private val insertQuery = """
+        INSERT INTO $COLLECTION_NAME (ts, message, attrs)
+        VALUES (?, ?, ?)
     """.trimIndent()
 
-    // https://www.arangodb.com/docs/stable/aql/functions-fulltext.html
-    private val queryWithText = """
-        FOR x IN FULLTEXT($COLLECTION_NAME, message, @text, 100)
-        FILTER x.ts >= @from AND x.ts <= @until
-        LIMIT 100
-        RETURN x 
+    override fun putEvents(events: List<Event>) {
+        val connection = db.connection
+        connection.autoCommit = false
+        val statement = connection.prepareStatement(insertQuery)
+        events.forEach {
+            statement.apply {
+                setTimestamp(1, Timestamp.from(it.ts.toInstant()))
+                setString(2, it.message)
+                setObject(3, it.attrs)
+                execute()
+            }
+        }
+        connection.commit()
+    }
+
+    private val selectQuery = """
+        SELECT ts, message, attrs from $COLLECTION_NAME
+        WHERE ts BETWEEN ? AND ?
+    """.trimIndent()
+
+    private val selectQueryWithMessageFilter = """
+        SELECT ts, message, attrs from $COLLECTION_NAME
+        WHERE ts BETWEEN ? AND ?
+          AND message ILIKE ?
     """.trimIndent()
 
     override fun searchEvents(from: String, until: String?, text: String?): List<Event> {
-        val untilDT = until ?: ZonedDateTime
-            .now(tz)
-            .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        val bindVars = MapBuilder()
-            .put("from", from)
-            .put("until", untilDT)
-        var queryText = query
-        text?.let {
-            bindVars.put("text", it)
-            queryText = queryWithText
+        // construct datetimes
+        val untilDT = if (until != null)
+            until.toZonedDateTime()
+        else ZonedDateTime.now()
+        val fromDT = from.toZonedDateTime()
+        // select query text
+        val queryText = if (text != null) selectQueryWithMessageFilter else selectQuery
+        val statement = db.connection.prepareStatement(queryText)
+        statement.apply {
+            setTimestamp(1, fromDT.toTimestamp())
+            setTimestamp(2, untilDT.toTimestamp())
+            text?.let {
+                setString(3, it)
+            }
         }
-        val result = db.query(queryText, bindVars.get(), String::class.java)
-        return result.map { Jackson.mapper.readValue<Event>(it) }.toList()
+        val result = statement.executeQuery()
+        val events = ArrayList<Event>()
+        while (result.next()) {
+            val event = Event(
+                ts = result.getTimestamp(1).toZonedDateTime(),
+                message = result.getString(2),
+                attrs = result.getObject(3) as Map<String, String>
+            )
+            events.add(event)
+        }
+        return events
     }
+
+    private fun String.toZonedDateTime() = ZonedDateTime.parse(this, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+    private fun ZonedDateTime.toTimestamp() = Timestamp.from(this.toInstant())
+    private fun Timestamp.toZonedDateTime() = ZonedDateTime.ofInstant(toInstant(), ZoneId.of("UTC"))
 }

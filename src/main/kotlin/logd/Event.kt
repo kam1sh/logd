@@ -2,7 +2,7 @@ package logd
 
 import java.time.ZonedDateTime
 
-const val COLLECTION_NAME = "logs"
+const val COLLECTION_NAME = "events"
 
 data class Event(
     var ts: ZonedDateTime,

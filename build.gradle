@@ -43,9 +43,8 @@ dependencies {
     implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: "$jackson_version"
 
     // database
-    // https://github.com/arangodb/arangodb-java-driver/
-    // https://search.maven.org/search?q=a:arangodb-java-driver
-    implementation 'com.arangodb:arangodb-java-driver:6.6.0'
+    implementation group: 'com.zaxxer', name: 'HikariCP', version: '3.4.2'
+    implementation 'org.postgresql:postgresql:42.2.9.jre7'
 
     // logging
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
