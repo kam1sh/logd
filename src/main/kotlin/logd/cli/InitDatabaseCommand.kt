@@ -8,9 +8,13 @@ import org.slf4j.LoggerFactory
 
 class InitDatabaseCommand(val app: App) : CliktCommand(name = "initdb") {
     val log = LoggerFactory.getLogger(javaClass)
+
     override fun run() {
         try {
             val collection = app.db.createCollection(COLLECTION_NAME)
+            val col = app.db.collection(COLLECTION_NAME)
+            col.ensureFulltextIndex(listOf("message"), null)
+            col.ensurePersistentIndex(listOf("ts"), null)
             log.info("Created collection logs ({})", collection)
         } catch (exc: ArangoDBException) {
             if (exc.errorNum == 1207) {

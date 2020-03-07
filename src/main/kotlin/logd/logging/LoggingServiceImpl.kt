@@ -34,17 +34,15 @@ class LoggingServiceImpl(val db: ArangoDatabase) : LoggingService {
 
     private val query = """
         FOR x IN $COLLECTION_NAME
-        FILTER DATE_TIMESTAMP(x.ts) >= DATE_TIMESTAMP(@from)
-           AND DATE_TIMESTAMP(x.ts) <= DATE_TIMESTAMP(@until)
+        FILTER x.ts >= @from AND x.ts <= @until
         LIMIT 100
         RETURN x
     """.trimIndent()
 
+    // https://www.arangodb.com/docs/stable/aql/functions-fulltext.html
     private val queryWithText = """
-        FOR x IN $COLLECTION_NAME
-        FILTER DATE_TIMESTAMP(x.ts) >= DATE_TIMESTAMP(@from)
-           AND DATE_TIMESTAMP(x.ts) <= DATE_TIMESTAMP(@until)
-           AND x.message LIKE @text
+        FOR x IN FULLTEXT($COLLECTION_NAME, message, @text, 100)
+        FILTER x.ts >= @from AND x.ts <= @until
         LIMIT 100
         RETURN x 
     """.trimIndent()
