@@ -2,11 +2,8 @@ package logd.logging
 
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.*
 import logd.COLLECTION_NAME
 import logd.Event
-import logd.web.Jackson
-import org.slf4j.LoggerFactory
 import java.sql.Timestamp
 import java.time.ZoneId
 import javax.sql.DataSource
@@ -19,18 +16,20 @@ class LoggingServiceImpl(val db: DataSource) : LoggingService {
     """.trimIndent()
 
     override fun putEvents(events: List<Event>) {
-        val connection = db.connection
-        connection.autoCommit = false
-        val statement = connection.prepareStatement(insertQuery)
-        events.forEach {
-            statement.apply {
-                setTimestamp(1, Timestamp.from(it.ts.toInstant()))
-                setString(2, it.message)
-                setObject(3, it.attrs)
-                execute()
+        db.connection.use {
+            it.autoCommit = false
+            val statement = it.prepareStatement(insertQuery)
+            events.forEach {
+                statement.apply {
+                    setTimestamp(1, Timestamp.from(it.ts.toInstant()))
+                    setString(2, it.message)
+                    setObject(3, it.attrs)
+                    execute()
+                    close()
+                }
             }
+            it.commit()
         }
-        connection.commit()
     }
 
     private val selectQuery = """
@@ -52,23 +51,26 @@ class LoggingServiceImpl(val db: DataSource) : LoggingService {
         val fromDT = from.toZonedDateTime()
         // select query text
         val queryText = if (text != null) selectQueryWithMessageFilter else selectQuery
-        val statement = db.connection.prepareStatement(queryText)
-        statement.apply {
-            setTimestamp(1, fromDT.toTimestamp())
-            setTimestamp(2, untilDT.toTimestamp())
-            text?.let {
-                setString(3, it)
-            }
-        }
-        val result = statement.executeQuery()
         val events = ArrayList<Event>()
-        while (result.next()) {
-            val event = Event(
-                ts = result.getTimestamp(1).toZonedDateTime(),
-                message = result.getString(2),
-                attrs = result.getObject(3) as Map<String, String>
-            )
-            events.add(event)
+        db.connection.use {
+            it.prepareStatement(queryText).use {
+                it.apply {
+                    setTimestamp(1, fromDT.toTimestamp())
+                    setTimestamp(2, untilDT.toTimestamp())
+                    text?.let {
+                        setString(3, it)
+                    }
+                }
+                val result = it.executeQuery()
+                while (result.next()) {
+                    val event = Event(
+                        ts = result.getTimestamp(1).toZonedDateTime(),
+                        message = result.getString(2),
+                        attrs = result.getObject(3) as Map<String, String>
+                    )
+                    events.add(event)
+                }
+            }
         }
         return events
     }
